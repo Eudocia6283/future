@@ -1,0 +1,186 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Noto+Serif+SC:wght@300;400;500;600;900&family=Space+Grotesk:wght@300;400;500&display=swap');
+@import "tailwindcss";
+
+/* The palette and type of Eudocia's Magical Atelier. Cinzel has no Chinese
+   glyphs, so Chinese text is set in Noto Serif SC, whose Song strokes sit
+   well beside it. */
+@theme {
+  --font-serif: "Cinzel", "Noto Serif SC", ui-serif, Georgia, serif;
+  --font-song: "Noto Serif SC", "Songti SC", "SimSun", ui-serif, serif;
+  --font-sans: "Space Grotesk", "Noto Serif SC", ui-sans-serif, system-ui, sans-serif;
+  --color-jacaranda: #8A63D2;
+  --color-jacaranda-light: #B496E8;
+  --color-peach-gold: #E5BEA5;
+  --color-ink: #2b2633;
+  /* The closed book's cloth, its board, and the paper of its pages. */
+  --color-night: #221a33;
+  --color-night-soft: #2f2547;
+  --color-ivory: #f3ece2;
+  --color-paper: #fdfaf5;
+  --color-sage: #6FA287;
+  --color-rose: #C9667A;
+
+  /* A slow turn for the sigils on the pages. */
+  --animate-turn-slow: turn 120s linear infinite;
+  /* The closed book's cover breathes while it waits to be opened. */
+  --animate-breathe: breathe 5s ease-in-out infinite;
+  /* Dots that pulse one after another while the book is thinking. */
+  --animate-ponder: ponder 1.6s ease-in-out infinite;
+  /* A slow ripple drifting out from the cover's eye, as from the Atelier's gates. */
+  --animate-eye-ripple: eye-ripple 7s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+
+  @keyframes turn {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes breathe {
+    0%,
+    100% {
+      filter: drop-shadow(0 0 0 rgb(138 99 210 / 0));
+    }
+    50% {
+      filter: drop-shadow(0 0 14px rgb(138 99 210 / 0.35));
+    }
+  }
+
+  @keyframes eye-ripple {
+    0% {
+      opacity: 0;
+      transform: scale(1);
+    }
+    8% {
+      opacity: 0.6;
+    }
+    55%,
+    100% {
+      opacity: 0;
+      transform: scale(1.6);
+    }
+  }
+
+  @keyframes ponder {
+    0%,
+    100% {
+      opacity: 0.2;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+}
+
+/* Turn an SVG group about the user-space origin, (0, 0), which is where the
+   book's sigils are centred. (`view-box` percentages would be measured from
+   the viewBox's corner, not its centre.) */
+@utility origin-user-zero {
+  transform-box: view-box;
+  transform-origin: 0 0;
+}
+
+@utility origin-fill-center {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+
+/*
+ * The hover shimmer shared by all display text, as in the Atelier. On hover,
+ * or on a tap via `data-pulse`, the text warms to jacaranda and softly glows.
+ */
+@utility glow-text {
+  --glow-color: var(--color-jacaranda);
+  --glow-shadow: rgb(138 99 210 / 0.5);
+  --glow-blur: 0.35em;
+  transition:
+    color 600ms ease-out,
+    filter 600ms ease-out;
+
+  &:is(:hover, [data-pulse]) {
+    color: var(--glow-color);
+    filter: drop-shadow(0 0 var(--glow-blur) var(--glow-shadow));
+  }
+
+  @media (hover: none) {
+    &:hover:not([data-pulse]) {
+      color: inherit;
+      filter: none;
+    }
+  }
+}
+
+@utility glow-text-group {
+  --glow-color: var(--color-jacaranda);
+  --glow-shadow: rgb(138 99 210 / 0.5);
+  --glow-blur: 0.35em;
+  transition:
+    color 600ms ease-out,
+    filter 600ms ease-out;
+
+  :where(.group):is(:hover, [data-pulse]) & {
+    color: var(--glow-color);
+    filter: drop-shadow(0 0 var(--glow-blur) var(--glow-shadow));
+  }
+
+  @media (hover: none) {
+    :where(.group):hover:not([data-pulse]) & {
+      color: inherit;
+      filter: none;
+    }
+  }
+}
+
+@utility glow-text-soft {
+  --glow-shadow: rgb(138 99 210 / 0.35);
+  --glow-blur: 0.6em;
+}
+
+/*
+ * Text written onto the page: each character surfaces from a blur in peach
+ * gold, passes through jacaranda like wet ink, and dries to the text colour.
+ * The per-character delay is set inline by <InkText>.
+ */
+.ink-char {
+  animation: ink-in 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes ink-in {
+  0% {
+    opacity: 0;
+    color: var(--color-peach-gold);
+    filter: blur(3px);
+  }
+  35% {
+    opacity: 1;
+    color: var(--color-jacaranda);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    color: var(--ink-dry, var(--color-ink));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ink-char {
+    animation: none;
+  }
+}
+
+/* A page's text scrolls without a visible bar, fading out at its lower edge. */
+@utility page-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  mask-image: linear-gradient(to bottom, black calc(100% - 2.5em), transparent);
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+body {
+  background-color: #ffffff;
+  color: var(--color-ink);
+  overflow: hidden;
+}
