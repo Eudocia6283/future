@@ -7,6 +7,8 @@ import { Fireflies, type FirefliesRef } from "./components/Fireflies";
 import { MagicCircle } from "./components/MagicCircle";
 import { useTapPulse } from "./hooks/useTapPulse";
 import { useOracle } from "./oracle/useOracle";
+import { hasReading, type WorkbenchSource } from "./workbench/data";
+import { Workbench } from "./workbench/Workbench";
 
 /** An open spread needs a wide, landscape window; anything narrower reads one page at a time. */
 function useGeometry(): Geometry {
@@ -35,6 +37,41 @@ export default function App() {
   const bookRef = useRef<HTMLDivElement>(null);
   const [ripples, setRipples] = useState<{ id: number; x: number; y: number }[]>([]);
   const rippleId = useRef(0);
+
+  // The workbench: the same reading laid out as a console instead of a book.
+  // `?workbench=1` opens it on the bundled demonstration, so a plain link can
+  // be handed to someone who has not answered anything; the book's last page
+  // opens it on the seeker's own reading.
+  const [workbench, setWorkbench] = useState<WorkbenchSource | null>(() => {
+    const asked = new URLSearchParams(window.location.search).get("workbench");
+    if (!asked) return null;
+    return asked === "reading" && hasReading(reading) ? "reading" : "sample";
+  });
+
+  const openWorkbench = useCallback((source: WorkbenchSource) => {
+    setWorkbench(source);
+    const url = new URL(window.location.href);
+    url.searchParams.set("workbench", source === "reading" ? "reading" : "1");
+    window.history.replaceState(null, "", url);
+  }, []);
+
+  const closeWorkbench = useCallback(() => {
+    setWorkbench(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("workbench");
+    window.history.replaceState(null, "", url);
+  }, []);
+
+  const openOwnWorkbench = useCallback(() => openWorkbench("reading"), [openWorkbench]);
+  const openDemoWorkbench = useCallback(() => openWorkbench("sample"), [openWorkbench]);
+
+  // Back from a page that had nothing to show: shut the console and, if the
+  // book is shut too, open it so the reading can be taken up where it stopped.
+  const resumeReading = useCallback(() => {
+    closeWorkbench();
+    if (reading.phase === "closed") open();
+  }, [closeWorkbench, reading.phase, open]);
+
   const thinking = ["pondering", "portraying", "divining"].includes(reading.phase) && !reading.error;
 
   // While the book thinks, the fireflies drift in towards it.
@@ -82,8 +119,26 @@ export default function App() {
 
       <header className="fixed top-0 right-0 left-0 z-30 flex items-start justify-between p-5 md:p-8">
         <Logo />
-        {/* Closing the book leaves a bookmark in it; taking the bookmark out starts afresh. */}
-        <AnimatePresence mode="wait">
+        <div className="flex items-start gap-5 md:gap-7">
+          {/* The reading laid out as a console; offered once the book is open. */}
+          <AnimatePresence>
+            {!closed && (
+              <motion.button
+                key="workbench"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1, transition: { delay: 1.5, duration: 1 } }}
+                exit={{ opacity: 0, transition: { duration: 0.3 } }}
+                onClick={openOwnWorkbench}
+                title="把这次占卜的成果摊开成一张工作台"
+                className="group flex cursor-pointer items-center gap-3 pt-3 font-song text-sm tracking-[0.3em] text-ink/70"
+              >
+                <span className="glow-text-group">工作台</span>
+                <span className="h-px w-6 bg-jacaranda-light" />
+              </motion.button>
+            )}
+          </AnimatePresence>
+          {/* Closing the book leaves a bookmark in it; taking the bookmark out starts afresh. */}
+          <AnimatePresence mode="wait">
           {(!closed || reading.bookmark) && (
             <motion.button
               key={closed ? "unmark" : "close"}
@@ -98,7 +153,8 @@ export default function App() {
               <span className="glow-text-group">{closed ? "取下书签" : "合上书"}</span>
             </motion.button>
           )}
-        </AnimatePresence>
+          </AnimatePresence>
+        </div>
       </header>
 
       <main className="@container relative z-10" style={{ width: size.width }}>
@@ -119,6 +175,8 @@ export default function App() {
             onRetry={retry}
             onTurn={turnTo}
             onRestart={restart}
+            onWorkbench={openOwnWorkbench}
+            paused={workbench !== null}
           />
         </div>
       </main>
@@ -141,8 +199,36 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* On the cover: the whole reading, for anyone who would rather see the
+          result than answer thirteen questions. Always the demonstration, so a
+          shared link shows the same thing everywhere. */}
+      <AnimatePresence>
+        {closed && (
+          <motion.div
+            key="workbench-entry"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, transition: { delay: 3.2, duration: 1.1 } }}
+            exit={{ opacity: 0, transition: { duration: 0.3 } }}
+            className="fixed bottom-[2.6svh] z-20"
+          >
+            <button
+              onClick={openDemoWorkbench}
+              title="不答题，直接看一份完整的示例成果"
+              className="group flex cursor-pointer items-center gap-3 border border-jacaranda-light/40 px-4 py-2 transition-colors hover:border-jacaranda/50"
+            >
+              <span className="font-serif text-[0.6rem] tracking-[0.25em] text-jacaranda uppercase">Tabula</span>
+              <span className="glow-text-group font-song text-xs tracking-[0.3em] text-ink/70">跳过问答 · 直接查看工作台</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {reading.mock && (
         <p className="fixed right-5 bottom-4 z-30 font-sans text-[0.6rem] tracking-[0.3em] text-ink/35">MOCK · 演示模式，未配置 GEMINI_API_KEY</p>
+      )}
+
+      {workbench && (
+        <Workbench reading={reading} initialSource={workbench} bookOpen={!closed} onClose={closeWorkbench} onResume={resumeReading} />
       )}
     </div>
   );

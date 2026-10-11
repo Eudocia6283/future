@@ -28,9 +28,13 @@ type Props = {
   onRetry: () => void;
   onTurn: (view: number | undefined) => void;
   onRestart: () => void;
+  /** Lay the reading out as a workbench instead of turning to another spread. */
+  onWorkbench: () => void;
+  /** An overlay owns the screen, so the book stops listening for arrow keys. */
+  paused?: boolean;
 };
 
-export function Book({ geo, reading, onOpen, onAnswer, onCorrect, onAccept, onRetry, onTurn, onRestart }: Props) {
+export function Book({ geo, reading, onOpen, onAnswer, onCorrect, onAccept, onRetry, onTurn, onRestart, onWorkbench, paused = false }: Props) {
   const { phase, pages, portrait, notes, prophecy, error, bookmark } = reading;
   const closed = phase === "closed";
   // "opening" and "closing" while the cover turns; a reading reloaded from storage starts "open".
@@ -58,7 +62,7 @@ export function Book({ geo, reading, onOpen, onAnswer, onCorrect, onAccept, onRe
   }, [cover, onOpen]);
 
   const { plan, home } = useMemo(() => planSpreads(reading), [reading]);
-  const chapters = useMemo(() => (prophecy ? prophecySpreads(prophecy, onRestart) : []), [prophecy, onRestart]);
+  const chapters = useMemo(() => (prophecy ? prophecySpreads(prophecy, onRestart, onWorkbench) : []), [prophecy, onRestart, onWorkbench]);
   const portraitPages = useMemo(
     () =>
       portrait &&
@@ -133,7 +137,7 @@ export function Book({ geo, reading, onOpen, onAnswer, onCorrect, onAccept, onRe
 
   // Arrow keys turn the pages, except while writing an answer.
   useEffect(() => {
-    if (cover !== "open") return;
+    if (cover !== "open" || paused) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLTextAreaElement) return;
       if (e.key === "ArrowRight" && index < spreads.length - 1) turnTo(index + 1);
@@ -141,7 +145,7 @@ export function Book({ geo, reading, onOpen, onAnswer, onCorrect, onAccept, onRe
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cover, index, spreads.length, turnTo]);
+  }, [cover, paused, index, spreads.length, turnTo]);
 
   const spreadLayout = geo.layout === "spread";
   // The closed book is shifted so its cover, not its spine, sits centred.

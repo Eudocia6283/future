@@ -207,7 +207,7 @@ export function portraitSpreads({
 }
 
 /** The prophecy, over two spreads: paths and study; practice and parting words. */
-export function prophecySpreads(p: Prophecy, onRestart: () => void): SpreadContent[] {
+export function prophecySpreads(p: Prophecy, onRestart: () => void, onWorkbench: () => void): SpreadContent[] {
   return [
     {
       left: (
@@ -289,6 +289,16 @@ export function prophecySpreads(p: Prophecy, onRestart: () => void): SpreadConte
               <InkText text={p.counsel} />
             </p>
             <span className="mt-[1.6em] h-px w-[3em] bg-peach-gold" />
+          </div>
+          <div className="mb-[1.4em] flex justify-center">
+            <button
+              onClick={onWorkbench}
+              title="把这份命途摊开成一张工作台"
+              className="group flex cursor-pointer items-center gap-[0.7em] border border-jacaranda-light/50 px-[1.2em] py-[0.55em] font-song text-[0.85em] tracking-[0.22em] text-ink/80 transition-colors hover:border-peach-gold"
+            >
+              <span className="font-serif text-[0.68em] tracking-[0.2em] text-jacaranda uppercase">Tabula</span>
+              <span className="glow-text-group">打开命途工作台</span>
+            </button>
           </div>
           <button onClick={onRestart} className="group flex cursor-pointer items-center justify-center gap-[0.8em] self-center font-song text-[0.8em] tracking-[0.3em] text-ink/70">
             <span className="h-px w-[1.8em] bg-jacaranda-light" />
